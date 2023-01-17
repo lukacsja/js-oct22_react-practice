@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './App.scss';
 
 import usersFromServer from './api/users';
@@ -29,27 +29,59 @@ const products: Product[] = productsFromServer;
 const categories: Category[] = categoriesFromServer;
 
 export const App: React.FC = () => {
-  const data = products.map(product => {
-    const category = categories.find(c => c.id === product.categoryId);
-    const owner = users.find(u => u.id === category?.ownerId);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [searchValue, setSearchValue] = useState('');
 
-    return {
-      id: product.id,
-      name: product.name,
-      category: `${category?.icon} ${category?.title}`,
-      owner: {
-        name: owner?.name,
-        color: owner?.sex === 'm' ? 'has-text-link' : 'has-text-danger',
-      },
-    };
-  });
+  const data = products
+    .filter(product => {
+      if (selectedUserId === null && searchValue === '') {
+        return true;
+      }
+
+      const category = categories.find(c => c.id === product.categoryId);
+
+      return (
+        (selectedUserId === null || category?.ownerId === selectedUserId)
+        && product.name.toLowerCase().includes(searchValue.toLowerCase())
+      );
+    })
+    .map(product => {
+      const category = categories.find(c => c.id === product.categoryId);
+      const owner = users.find(u => u.id === category?.ownerId);
+
+      return {
+        id: product.id,
+        name: product.name,
+        category: `${category?.icon} - ${category?.title}`,
+        owner: {
+          name: owner?.name,
+          color: owner?.sex === 'm' ? 'has-text-link' : 'has-text-danger',
+        },
+      };
+    });
+
+  const handleUserClick = (userId: number) => {
+    setSelectedUserId(userId);
+  };
+
+  const handleAllClick = () => {
+    setSelectedUserId(null);
+  };
+
+  const handleClearClick = () => {
+    setSearchValue('');
+  };
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchValue(event.target.value);
+  };
 
   return (
     <div className="section">
       <div className="container">
         <h1 className="title">Product Categories</h1>
-        {/* <div className="renderedTable">
-        </div> */}
+        <div className="renderedTable">
+        </div>
 
         <div className="block">
           <nav className="panel">
@@ -59,31 +91,23 @@ export const App: React.FC = () => {
               <a
                 data-cy="FilterAllUsers"
                 href="#/"
+                className={selectedUserId === null ? 'is-active' : ''}
+                onClick={handleAllClick}
               >
                 All
               </a>
 
-              <a
-                data-cy="FilterUser"
-                href="#/"
-              >
-                User 1
-              </a>
-
-              <a
-                data-cy="FilterUser"
-                href="#/"
-                className="is-active"
-              >
-                User 2
-              </a>
-
-              <a
-                data-cy="FilterUser"
-                href="#/"
-              >
-                User 3
-              </a>
+              {users.map(user => (
+                <a
+                  data-cy="FilterUser"
+                  key={user.id}
+                  href="#/"
+                  className={user.id === selectedUserId ? 'is-active' : ''}
+                  onClick={() => handleUserClick(user.id)}
+                >
+                  {user.name}
+                </a>
+              ))}
             </p>
 
             <div className="panel-block">
@@ -93,7 +117,8 @@ export const App: React.FC = () => {
                   type="text"
                   className="input"
                   placeholder="Search"
-                  value="qwe"
+                  value={searchValue}
+                  onChange={handleSearchChange}
                 />
 
                 <span className="icon is-left">
@@ -101,12 +126,15 @@ export const App: React.FC = () => {
                 </span>
 
                 <span className="icon is-right">
-                  {/* eslint-disable-next-line jsx-a11y/control-has-associated-label */}
-                  <button
-                    data-cy="ClearButton"
-                    type="button"
-                    className="delete"
-                  />
+                  {searchValue !== '' && (
+                    // eslint-disable-next-line jsx-a11y/control-has-associated-label
+                    <button
+                      data-cy="ClearButton"
+                      type="button"
+                      className="delete"
+                      onClick={handleClearClick}
+                    />
+                  )}
                 </span>
               </p>
             </div>
